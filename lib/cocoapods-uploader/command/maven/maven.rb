@@ -6,6 +6,8 @@ require 'fileutils'
 module Pod
   class Command
     class Maven < Upload
+      attr_accessor :path, :spec
+
       self.summary = 'Upload file/dir to remote maven repository.'
 
       self.description = <<-DESC
@@ -32,8 +34,8 @@ module Pod
         version = Specification.from_file(@spec).version
         name = Specification.from_file(@spec).name
        
-        file_name = "#{name}.gz"
-        compress_file(@path,file_name)
+        file_name = "#{name}.zip"
+        compress(@path.dup,file_name)
 
         setting = Pod::Setting.new
         setting.open
@@ -47,46 +49,24 @@ module Pod
 
       private
 
-      def compress_file(path,file_name)
-        file = "./#{file_name}"
+      def compress(path,file_name)
+        path.sub!(%r[/$],'')
+        archive = File.join(File.dirname(path),file_name)
         if Pod::Config.instance.verbose?
-          puts "Compress File #{file}"
+          puts "Compress to File #{archive}"
         end
-        if File.exist?(file)
-          FileUtils.rm(file)
-        end
-        entries = [path]#Dir.entries(path) - %w(. ..)
-        Zip::File.open(file, ::Zip::File::CREATE) do |io|
-          write_entries entries, '', io
-        end
-      end
+        FileUtils.rm archive, :force=>true
 
-      def write_entries(entries, inpath, io)
-        entries.each do |e|
-          entry_path = inpath == '' ? e : File.join(inpath, e)
-          zip_path = File.join('.', entry_path)
-
-          if Pod::Config.instance.verbose?
-            puts "Deflating #{zip_path}"
+        Zip::OutputStream.open(archive) do |zip|
+          Dir["#{path}/**/**"].reject{|f|f==archive}.each do |file|
+            if Pod::Config.instance.verbose?
+              puts "Deflating #{file}"
+            end
+            entry = Zip::Entry.new("", file)
+            entry.gather_fileinfo_from_srcpath(file)
+            zip.put_next_entry(entry, nil, nil, Zip::Entry::DEFLATED, Zlib::BEST_COMPRESSION)
+            entry.write_to_zip_output_stream(zip)
           end
-
-          if File.directory? zip_path
-            recursively_deflate_directory(zip_path, io, entry_path)
-          else
-            put_into_archive(zip_path, io, entry_path)
-          end
-        end
-      end
-
-      def recursively_deflate_directory(zip_path, io, entry_path)
-        io.mkdir entry_path
-        subdir = Dir.entries(zip_path) - %w(. ..)
-        write_entries subdir, entry_path, io
-      end
-
-      def put_into_archive(zip_path, io, entry_path)
-        io.get_output_stream(entry_path) do |f|
-          f.puts(File.open(zip_path, 'rb').read)
         end
       end
 
