@@ -23,7 +23,7 @@ cocoapods-uploader is a tool that help upload file/dir to remote repository.
 		
 	etc:
 	
-		pod upload maven ios Test.podspec
+		$ pod upload maven ios Test.podspec
 		
 		
 ## Author
