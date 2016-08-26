@@ -4,7 +4,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 require 'cocoapods-uploader/gem_version.rb'
 
 Gem::Specification.new do |spec|
-  spec.name          = 'cocoapods-Uploader'
+  spec.name          = 'cocoapods-uploader'
   spec.version       = CocoapodsUploader::VERSION
   spec.authors       = ['supern_lee']
   spec.email         = ['supern.lee@gmail.com']
